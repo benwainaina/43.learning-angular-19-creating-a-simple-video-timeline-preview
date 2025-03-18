@@ -1,10 +1,65 @@
 .wrapper {
+  position: relative;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+
   &__video {
-    width: 320px;
-    height: 100%;
-    background-color: red;
+    width: 100%;
+    aspect-ratio: 1;
   }
+
+  &__video-control-panel {
+    display: flex;
+    flex-direction: column;
+    row-gap: 12px;
+
+    &__progress {
+      height: 5px;
+      width: 100%;
+      display: flex;
+      position: relative;
+      align-items: center;
+
+      &__filled,
+      &__empty {
+        height: 100%;
+      }
+
+      &__filled {
+        background-color: red;
+        width: 33%;
+        left: 0;
+        position: absolute;
+      }
+
+      &__empty {
+        background-color: #f1f1f1;
+        width: 100%;
+      }
+    }
+  }
+
+  &__video-progress {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    &__thumb {
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      position: absolute;
+      border-radius: 50%;
+      left: 33%;
+      cursor: pointer;
+    }
+  }
+
   &__canvas {
     outline: 1px solid black;
+    width: 50px;
+    height: 50px;
   }
 }

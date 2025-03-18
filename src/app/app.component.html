@@ -1,5 +1,6 @@
 <div class="wrapper">
-  <video class="wrapper__video" controls #video crossorigin="anonymous">
+  <!-- video source -->
+  <video class="wrapper__video" #video crossorigin="anonymous">
     <source
       src="https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.webm"
       type="video/webm"
@@ -9,14 +10,31 @@
       type="video/mp4"
     />
   </video>
-  <canvas class="wrapper__canvas" #canvas></canvas>
 
   <!-- video control panel -->
   <div class="wrapper__video-control-panel">
-    <div class="wrapper__video-control-panel__play-pause"></div>
-    <div class="wrapper__video-control-panel__volume">
-      <div class="wrapper__video-control-panel__volume__icon"></div>
-      <div class="wrapper__video-control-panel__volume__adjust"></div>
+    <div class="wrapper__video-control-panel__progress">
+      <div class="wrapper__video-control-panel__progress__empty"></div>
+      <div class="wrapper__video-control-panel__progress__filled"></div>
+      <div class="wrapper__video-progress__thumb"></div>
+    </div>
+    <div class="wrapper__video-control-panel__controls">
+      <div class="wrapper__video-control-panel__play-pause"></div>
+      <div class="wrapper__video-control-panel__volume">
+        <div class="wrapper__video-control-panel__volume__icon">
+          <mat-icon (click)="toggleVideoPlay()">{{
+            isPlaying ? "pause" : "play_arrow"
+          }}</mat-icon>
+          <mat-icon>skip_next</mat-icon>
+          <mat-icon (click)="toggleMuted()">
+            {{ isMuted ? "volume_off" : "volume_down" }}
+          </mat-icon>
+        </div>
+        <div class="wrapper__video-control-panel__volume__adjust"></div>
+      </div>
     </div>
   </div>
+
+  <!-- preview canvas -->
+  <canvas class="wrapper__preview" #canvas></canvas>
 </div>
