@@ -1,0 +1,10 @@
+.wrapper {
+  &__video {
+    width: 320px;
+    height: 100%;
+    background-color: red;
+  }
+  &__canvas {
+    outline: 1px solid black;
+  }
+}
