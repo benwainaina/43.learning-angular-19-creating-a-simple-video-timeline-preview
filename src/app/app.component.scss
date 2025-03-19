@@ -29,7 +29,6 @@
 
       &__filled {
         background-color: red;
-        width: 33%;
         left: 0;
         position: absolute;
       }
@@ -37,6 +36,17 @@
       &__empty {
         background-color: #f1f1f1;
         width: 100%;
+      }
+    }
+
+    &__controls {
+      display: flex;
+      column-gap: 24px;
+      mat-icon {
+        font-size: 44px;
+        height: 44px;
+        width: 44px;
+        cursor: pointer;
       }
     }
   }
@@ -52,14 +62,13 @@
       background-color: red;
       position: absolute;
       border-radius: 50%;
-      left: 33%;
       cursor: pointer;
     }
   }
 
-  &__canvas {
+  &__preview {
     outline: 1px solid black;
-    width: 50px;
-    height: 50px;
+    width: 100px;
+    height: 80px;
   }
 }

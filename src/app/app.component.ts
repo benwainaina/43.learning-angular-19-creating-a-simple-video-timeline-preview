@@ -1,7 +1,9 @@
 import {
   Component,
   ElementRef,
+  inject,
   OnInit,
+  Renderer2,
   Signal,
   viewChild,
 } from '@angular/core';
@@ -16,22 +18,35 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class AppComponent implements OnInit {
   private videoOutlet: Signal<ElementRef<HTMLVideoElement> | undefined> =
-    viewChild<ElementRef<HTMLVideoElement>>('video');
+    viewChild('video');
   private canvasOutlet: Signal<ElementRef<HTMLCanvasElement> | undefined> =
-    viewChild<ElementRef<HTMLCanvasElement>>('canvas');
+    viewChild('canvas');
+  private filledProgress: Signal<ElementRef<HTMLDivElement> | undefined> =
+    viewChild('filledProgress');
+  private indicatorThumb: Signal<ElementRef<HTMLDivElement> | undefined> =
+    viewChild('indicatorThumb');
+
+  private renderer2: Renderer2 = inject(Renderer2);
+
   public allowPreview: boolean = false;
   public isPlaying: boolean = false;
   public isMuted: boolean = false;
+  public playBackRate: number = 1;
+  private videoDurationInMilliSeconds: number = 0;
 
   ngOnInit() {
     this.configureVideoPlayer();
+    this.controlVideoProgressDisplay();
   }
 
   private configureVideoPlayer() {
     const videoOutlet = this.videoOutlet();
     const canvasOutlet = this.canvasOutlet();
     if (videoOutlet && canvasOutlet) {
-      videoOutlet.nativeElement.muted = true;
+      videoOutlet.nativeElement.muted = true; // read this from the local storage
+      videoOutlet.nativeElement.oncanplay = (ev: any) => {
+        this.videoDurationInMilliSeconds = ev.target.duration * 1000;
+      };
     }
   }
 
@@ -53,6 +68,39 @@ export class AppComponent implements OnInit {
     }
   }
 
+  private controlVideoProgressDisplay() {
+    const video = this.videoOutlet();
+    const filledProgress = this.filledProgress();
+    const indicatorThumb = this.indicatorThumb();
+    let playInterval: any;
+    if (video) {
+      video.nativeElement.onplay = (ev) => {
+        playInterval = setInterval(() => {
+          const percentCovered = `${
+            ((video.nativeElement.currentTime * 1000) /
+              this.videoDurationInMilliSeconds) *
+            100
+          }%`;
+          if (filledProgress && indicatorThumb) {
+            this.commonSetStyle(
+              filledProgress.nativeElement,
+              'width',
+              percentCovered
+            );
+            this.commonSetStyle(
+              indicatorThumb.nativeElement,
+              'left',
+              percentCovered
+            );
+          }
+        }, this.playBackRate * 1);
+      };
+      video.nativeElement.onpause = (ev) => {
+        clearInterval(playInterval);
+      };
+    }
+  }
+
   public toggleVideoPlay() {
     this.isPlaying = !this.isPlaying;
     this.isPlaying
@@ -66,5 +114,9 @@ export class AppComponent implements OnInit {
     if (videoOutlet) {
       videoOutlet.nativeElement.muted = this.isMuted;
     }
+  }
+
+  private commonSetStyle(element: any, style: string, styleValue: string) {
+    this.renderer2.setStyle(element, style, styleValue);
   }
 }
