@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-root',
@@ -29,8 +28,9 @@ export class AppComponent implements OnInit {
   //   viewChild('canvas');
   private filledProgress: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('filledProgress');
-  private indicatorThumb: Signal<ElementRef<HTMLDivElement> | undefined> =
-    viewChild('indicatorThumb');
+  private indicatorThumbElementRef: Signal<
+    ElementRef<HTMLDivElement> | undefined
+  > = viewChild('indicatorThumbElementRef');
   private wrapperElement: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('wrapperElement');
   private renderer2: Renderer2 = inject(Renderer2);
@@ -44,11 +44,11 @@ export class AppComponent implements OnInit {
   public playBackRate: number = 1;
   public videoSources: Array<{ source: string; type: string }> = [
     {
-      source: 'https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.webm',
+      source: 'test.mp4',
       type: 'video/webm',
     },
     {
-      source: 'https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.mp4',
+      source: 'test.mp4',
       type: 'video/mp4',
     },
   ];
@@ -62,6 +62,7 @@ export class AppComponent implements OnInit {
     const videoOutlet = this.videoOutlet();
     if (videoOutlet) {
       videoOutlet.nativeElement.muted = true; // read this from the local storage
+      videoOutlet.nativeElement.autoplay = true;
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
         this.preSampleVideoFrames(videoOutlet.nativeElement);
@@ -72,6 +73,8 @@ export class AppComponent implements OnInit {
 
   private preSampleVideoFrames(videoOutlet: HTMLVideoElement) {
     this.videoSampler = videoOutlet.cloneNode(true) as HTMLVideoElement;
+    this.videoSampler.autoplay = false;
+    this.videoSampler.muted = true;
     const wrapperElement = this.wrapperElement();
     if (wrapperElement) {
       wrapperElement.nativeElement.appendChild(this.videoSampler);
@@ -83,16 +86,21 @@ export class AppComponent implements OnInit {
     const videoProgressWrapperElementRef =
       this.videoProgressWrapperElementRef();
     if (videoProgressWrapperElementRef) {
-      const { y: progressWrapperY } =
+      const { y: progressWrapperY, height: progressWrapperHeight } =
         videoProgressWrapperElementRef.nativeElement.getBoundingClientRect();
       this.commonSetStyle(this.videoSampler, 'position', 'absolute');
       this.commonSetStyle(this.videoSampler, 'width', '160px');
       this.commonSetStyle(this.videoSampler, 'aspect-ratio', '2');
+      this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
       this.videoSamplerRect.set(this.videoSampler.getBoundingClientRect());
       this.commonSetStyle(
         this.videoSampler,
         'top',
-        `${progressWrapperY - (this.videoSamplerRect()?.height || 0)}px`
+        `${
+          progressWrapperY -
+          (this.videoSamplerRect()?.height || 0) -
+          progressWrapperHeight
+        }px`
       );
     }
   }
@@ -100,7 +108,7 @@ export class AppComponent implements OnInit {
   private controlVideoProgressDisplay() {
     const video = this.videoOutlet();
     const filledProgress = this.filledProgress();
-    const indicatorThumb = this.indicatorThumb();
+    const indicatorThumb = this.indicatorThumbElementRef();
     let playInterval: any;
     if (video) {
       video.nativeElement.onplay = (ev) => {
@@ -209,3 +217,11 @@ export class AppComponent implements OnInit {
     }
   }
 }
+
+/**
+ * TODOS:
+ *
+ * 1. Listen for clicking on a seek positions and play main video at that position.
+ * 2. Hovering on the thumb trigers mouse leave event
+ * 3. Listen for resizing and compute preview position
+ */

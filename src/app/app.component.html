@@ -14,7 +14,10 @@
         class="wrapper__video-control-panel__progress__filled"
         #filledProgress
       ></div>
-      <div class="wrapper__video-progress__thumb" #indicatorThumb></div>
+      <div
+        class="wrapper__video-progress__thumb"
+        #indicatorThumbElementRef
+      ></div>
     </div>
     <div class="wrapper__video-control-panel__controls">
       <mat-icon (click)="toggleVideoPlay()">{{
