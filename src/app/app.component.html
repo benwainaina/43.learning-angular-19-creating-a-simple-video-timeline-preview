@@ -1,19 +1,14 @@
-<div class="wrapper">
-  <!-- video source -->
+<div class="wrapper" #wrapperElement>
   <video class="wrapper__video" #video crossorigin="anonymous">
-    <source
-      src="https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.webm"
-      type="video/webm"
-    />
-    <source
-      src="https://jplayer.org/video/m4v/Big_Buck_Bunny_Trailer.m4v"
-      type="video/mp4"
-    />
+    @for(source of videoSources; track source.type) {
+    <source src="{{ source.source }}" type="{{ source.type }}" />
+    }
   </video>
-
-  <!-- video control panel -->
   <div class="wrapper__video-control-panel">
-    <div class="wrapper__video-control-panel__progress">
+    <div
+      class="wrapper__video-control-panel__progress"
+      #videoProgressWrapperElementRef
+    >
       <div class="wrapper__video-control-panel__progress__empty"></div>
       <div
         class="wrapper__video-control-panel__progress__filled"
@@ -31,7 +26,4 @@
       </mat-icon>
     </div>
   </div>
-
-  <!-- preview canvas -->
-  <canvas class="wrapper__preview" #canvas></canvas>
 </div>

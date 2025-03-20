@@ -1,6 +1,6 @@
 .wrapper {
   position: relative;
-  width: 320px;
+  // width: 320px;
   display: flex;
   flex-direction: column;
   row-gap: 24px;
@@ -16,11 +16,12 @@
     row-gap: 12px;
 
     &__progress {
-      height: 5px;
+      height: 10px;
       width: 100%;
       display: flex;
       position: relative;
       align-items: center;
+      cursor: pointer;
 
       &__filled,
       &__empty {
@@ -69,6 +70,6 @@
   &__preview {
     outline: 1px solid black;
     width: 100px;
-    height: 80px;
+    aspect-ratio: 1;
   }
 }

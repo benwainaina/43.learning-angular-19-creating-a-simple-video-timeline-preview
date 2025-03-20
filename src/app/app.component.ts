@@ -4,11 +4,14 @@ import {
   inject,
   OnInit,
   Renderer2,
+  signal,
   Signal,
   viewChild,
+  WritableSignal,
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-root',
@@ -17,22 +20,38 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit {
+  private videoProgressWrapperElementRef: Signal<
+    ElementRef<HTMLVideoElement> | undefined
+  > = viewChild('videoProgressWrapperElementRef');
   private videoOutlet: Signal<ElementRef<HTMLVideoElement> | undefined> =
     viewChild('video');
-  private canvasOutlet: Signal<ElementRef<HTMLCanvasElement> | undefined> =
-    viewChild('canvas');
+  // private canvasOutlet: Signal<ElementRef<HTMLCanvasElement> | undefined> =
+  //   viewChild('canvas');
   private filledProgress: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('filledProgress');
   private indicatorThumb: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('indicatorThumb');
-
+  private wrapperElement: Signal<ElementRef<HTMLDivElement> | undefined> =
+    viewChild('wrapperElement');
   private renderer2: Renderer2 = inject(Renderer2);
+  private videoDurationInMilliSeconds: number = 0;
+  private videoSampler!: HTMLVideoElement;
+  private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
 
   public allowPreview: boolean = false;
   public isPlaying: boolean = false;
   public isMuted: boolean = false;
   public playBackRate: number = 1;
-  private videoDurationInMilliSeconds: number = 0;
+  public videoSources: Array<{ source: string; type: string }> = [
+    {
+      source: 'https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.webm',
+      type: 'video/webm',
+    },
+    {
+      source: 'https://jplayer.org/video/webm/Big_Buck_Bunny_Trailer.mp4',
+      type: 'video/mp4',
+    },
+  ];
 
   ngOnInit() {
     this.configureVideoPlayer();
@@ -41,30 +60,40 @@ export class AppComponent implements OnInit {
 
   private configureVideoPlayer() {
     const videoOutlet = this.videoOutlet();
-    const canvasOutlet = this.canvasOutlet();
-    if (videoOutlet && canvasOutlet) {
+    if (videoOutlet) {
       videoOutlet.nativeElement.muted = true; // read this from the local storage
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
+        this.preSampleVideoFrames(videoOutlet.nativeElement);
+        this.listenForPreviewIntent();
       };
     }
   }
 
-  public projectPreviewToCanvas() {
-    const videoOutlet = this.videoOutlet();
-    const canvasOutlet = this.canvasOutlet();
-    if (videoOutlet && canvasOutlet) {
-      const { width, height } =
-        videoOutlet.nativeElement.getBoundingClientRect();
-      videoOutlet.nativeElement.oncanplay = () => {
-        this.allowPreview = true;
-        const context = canvasOutlet.nativeElement.getContext('2d');
-        context?.drawImage(videoOutlet.nativeElement, 0, 0, width, height);
-        const frame = context?.getImageData(0, 0, width, height);
-        if (frame) {
-          context?.putImageData(frame, 0, 0);
-        }
-      };
+  private preSampleVideoFrames(videoOutlet: HTMLVideoElement) {
+    this.videoSampler = videoOutlet.cloneNode(true) as HTMLVideoElement;
+    const wrapperElement = this.wrapperElement();
+    if (wrapperElement) {
+      wrapperElement.nativeElement.appendChild(this.videoSampler);
+      this.styleVideoPreview();
+    }
+  }
+
+  private styleVideoPreview() {
+    const videoProgressWrapperElementRef =
+      this.videoProgressWrapperElementRef();
+    if (videoProgressWrapperElementRef) {
+      const { y: progressWrapperY } =
+        videoProgressWrapperElementRef.nativeElement.getBoundingClientRect();
+      this.commonSetStyle(this.videoSampler, 'position', 'absolute');
+      this.commonSetStyle(this.videoSampler, 'width', '160px');
+      this.commonSetStyle(this.videoSampler, 'aspect-ratio', '2');
+      this.videoSamplerRect.set(this.videoSampler.getBoundingClientRect());
+      this.commonSetStyle(
+        this.videoSampler,
+        'top',
+        `${progressWrapperY - (this.videoSamplerRect()?.height || 0)}px`
+      );
     }
   }
 
@@ -118,5 +147,65 @@ export class AppComponent implements OnInit {
 
   private commonSetStyle(element: any, style: string, styleValue: string) {
     this.renderer2.setStyle(element, style, styleValue);
+  }
+
+  private listenForPreviewIntent() {
+    const videoProgressWrapperElementRef =
+      this.videoProgressWrapperElementRef();
+    if (videoProgressWrapperElementRef) {
+      const { width: videoProgressWrapperElementRefWidth } =
+        videoProgressWrapperElementRef?.nativeElement.getBoundingClientRect();
+
+      // on mouse enter, show the preview
+
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mouseenter',
+        () => this.commonSetStyle(this.videoSampler, 'visibility', 'visible')
+      );
+
+      // on mouse move, adjust position and the preview content
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mousemove',
+        (ev) => {
+          const { clientX } = ev;
+
+          // block moving preview past the available area
+
+          let samplerPositionX =
+            clientX - (this.videoSamplerRect()?.width || 0) / 2;
+
+          if (
+            samplerPositionX + (this.videoSamplerRect()?.width || 0) >
+            videoProgressWrapperElementRefWidth
+          ) {
+            samplerPositionX =
+              videoProgressWrapperElementRefWidth -
+              (this.videoSamplerRect()?.width || 0);
+          } else if (samplerPositionX < 0) {
+            samplerPositionX = 0;
+          }
+
+          this.commonSetStyle(
+            this.videoSampler,
+            'left',
+            `${samplerPositionX}px`
+          );
+          const percentageFromStart =
+            clientX / videoProgressWrapperElementRefWidth;
+          const soughtPositionInSeconds = Math.floor(
+            (this.videoDurationInMilliSeconds * percentageFromStart) / 1000
+          );
+          this.videoSampler.currentTime = soughtPositionInSeconds;
+        }
+      );
+
+      // on mouse leave, hide the preview
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mouseleave',
+        (ev) => {
+          this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
+        }
+      );
+    }
   }
 }
