@@ -38,6 +38,7 @@ export class AppComponent implements OnInit {
   private videoSampler!: HTMLVideoElement;
   private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
   private addedSampler: boolean = false;
+  private thumbClicked: boolean = false;
 
   public allowPreview: boolean = false;
   public isPlaying: boolean = true;
@@ -149,6 +150,7 @@ export class AppComponent implements OnInit {
 
   public toggleVideoPlay() {
     this.isPlaying = !this.isPlaying;
+    console.log('this.isPlaying', this.isPlaying);
     this.isPlaying
       ? this.videoOutlet()?.nativeElement.play()
       : this.videoOutlet()?.nativeElement.pause();
@@ -169,6 +171,7 @@ export class AppComponent implements OnInit {
   private listenForPreviewIntent() {
     const videoProgressWrapperElementRef =
       this.videoProgressWrapperElementRef();
+    const videoOutlet = this.videoOutlet();
     if (videoProgressWrapperElementRef) {
       const { width: videoProgressWrapperElementRefWidth } =
         videoProgressWrapperElementRef?.nativeElement.getBoundingClientRect();
@@ -201,18 +204,28 @@ export class AppComponent implements OnInit {
             'left',
             `${samplerPositionX}px`
           );
-          this.videoSampler.currentTime =
-            this.convertWidthToTimelinePositionInSeconds(
-              videoProgressWrapperElementRefWidth,
-              clientX
-            );
+          const seekTime = this.convertWidthToTimelinePositionInSeconds(
+            videoProgressWrapperElementRefWidth,
+            clientX
+          );
+          this.videoSampler.currentTime = seekTime;
+
+          if (this.thumbClicked && videoOutlet) {
+            videoOutlet.nativeElement.currentTime = seekTime;
+          }
         }
       );
 
       // on mouse leave, hide the preview
       videoProgressWrapperElementRef.nativeElement.addEventListener(
         'mouseleave',
-        (ev) => this.commonSetStyle(this.videoSampler, 'visibility', 'hidden')
+        (ev) => {
+          if (this.thumbClicked) {
+            this.thumbClicked = false;
+            this.toggleVideoPlay();
+          }
+          this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
+        }
       );
 
       // listen for mouse click on video timeline
@@ -238,7 +251,20 @@ export class AppComponent implements OnInit {
     }
   }
 
-  private listenForThumbDragEvent() {}
+  private listenForThumbDragEvent() {
+    const indicatorThumb = this.indicatorThumbElementRef();
+    if (indicatorThumb) {
+      indicatorThumb.nativeElement.addEventListener('mousedown', (ev) => {
+        this.thumbClicked = true;
+        this.toggleVideoPlay();
+        ev.stopImmediatePropagation();
+      });
+      indicatorThumb.nativeElement.addEventListener('mouseup', (ev) => {
+        this.toggleVideoPlay();
+        this.thumbClicked = false;
+      });
+    }
+  }
 
   private convertWidthToTimelinePositionInSeconds(
     totalWidth: number,
