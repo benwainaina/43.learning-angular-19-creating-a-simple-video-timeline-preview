@@ -37,9 +37,10 @@ export class AppComponent implements OnInit {
   private videoDurationInMilliSeconds: number = 0;
   private videoSampler!: HTMLVideoElement;
   private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
+  private addedSampler: boolean = false;
 
   public allowPreview: boolean = false;
-  public isPlaying: boolean = false;
+  public isPlaying: boolean = true;
   public isMuted: boolean = false;
   public playBackRate: number = 1;
   public videoSources: Array<{ source: string; type: string }> = [
@@ -65,8 +66,11 @@ export class AppComponent implements OnInit {
       videoOutlet.nativeElement.autoplay = true;
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
-        this.preSampleVideoFrames(videoOutlet.nativeElement);
         this.listenForPreviewIntent();
+        if (!this.addedSampler) {
+          this.preSampleVideoFrames(videoOutlet.nativeElement);
+          this.addedSampler = true;
+        }
       };
     }
   }
@@ -113,21 +117,11 @@ export class AppComponent implements OnInit {
     if (video) {
       video.nativeElement.onplay = (ev) => {
         playInterval = setInterval(() => {
-          const percentCovered = `${
-            ((video.nativeElement.currentTime * 1000) /
-              this.videoDurationInMilliSeconds) *
-            100
-          }%`;
           if (filledProgress && indicatorThumb) {
-            this.commonSetStyle(
+            this.updateVideoProgress(
+              video.nativeElement,
               filledProgress.nativeElement,
-              'width',
-              percentCovered
-            );
-            this.commonSetStyle(
-              indicatorThumb.nativeElement,
-              'left',
-              percentCovered
+              indicatorThumb.nativeElement
             );
           }
         }, this.playBackRate * 1);
@@ -135,6 +129,20 @@ export class AppComponent implements OnInit {
       video.nativeElement.onpause = (ev) => {
         clearInterval(playInterval);
       };
+    }
+  }
+
+  private updateVideoProgress(
+    video?: HTMLVideoElement,
+    filledProgress?: HTMLDivElement,
+    indicatorThumb?: HTMLDivElement
+  ) {
+    if (video && filledProgress && indicatorThumb) {
+      const percentCovered = `${
+        ((video.currentTime * 1000) / this.videoDurationInMilliSeconds) * 100
+      }%`;
+      this.commonSetStyle(filledProgress, 'width', percentCovered);
+      this.commonSetStyle(indicatorThumb, 'left', percentCovered);
     }
   }
 
@@ -164,17 +172,11 @@ export class AppComponent implements OnInit {
       const { width: videoProgressWrapperElementRefWidth } =
         videoProgressWrapperElementRef?.nativeElement.getBoundingClientRect();
 
-      // on mouse enter, show the preview
-
-      videoProgressWrapperElementRef.nativeElement.addEventListener(
-        'mouseenter',
-        () => this.commonSetStyle(this.videoSampler, 'visibility', 'visible')
-      );
-
       // on mouse move, adjust position and the preview content
       videoProgressWrapperElementRef.nativeElement.addEventListener(
         'mousemove',
         (ev) => {
+          this.commonSetStyle(this.videoSampler, 'visibility', 'visible');
           const { clientX } = ev;
 
           // block moving preview past the available area
@@ -198,30 +200,57 @@ export class AppComponent implements OnInit {
             'left',
             `${samplerPositionX}px`
           );
-          const percentageFromStart =
-            clientX / videoProgressWrapperElementRefWidth;
-          const soughtPositionInSeconds = Math.floor(
-            (this.videoDurationInMilliSeconds * percentageFromStart) / 1000
-          );
-          this.videoSampler.currentTime = soughtPositionInSeconds;
+          this.videoSampler.currentTime =
+            this.convertWidthToTimelinePositionInSeconds(
+              videoProgressWrapperElementRefWidth,
+              clientX
+            );
         }
       );
 
       // on mouse leave, hide the preview
       videoProgressWrapperElementRef.nativeElement.addEventListener(
         'mouseleave',
+        (ev) => this.commonSetStyle(this.videoSampler, 'visibility', 'hidden')
+      );
+
+      // listen for mouse click on video timeline
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mousedown',
         (ev) => {
-          this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
+          const videoOutlet = this.videoOutlet();
+          if (videoOutlet) {
+            videoOutlet.nativeElement.currentTime =
+              this.convertWidthToTimelinePositionInSeconds(
+                videoProgressWrapperElementRefWidth,
+                ev.clientX
+              );
+            this.updateVideoProgress(
+              this.videoOutlet()?.nativeElement,
+              this.filledProgress()?.nativeElement,
+              this.indicatorThumbElementRef()?.nativeElement
+            );
+            this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
+          }
         }
       );
     }
   }
+
+  private convertWidthToTimelinePositionInSeconds(
+    totalWidth: number,
+    targetPosition: number
+  ): number {
+    return (
+      (this.videoDurationInMilliSeconds * (targetPosition / totalWidth)) / 1000
+    );
+  }
 }
 
-/**
- * TODOS:
- *
- * 1. Listen for clicking on a seek positions and play main video at that position.
- * 2. Hovering on the thumb trigers mouse leave event
- * 3. Listen for resizing and compute preview position
- */
+// TODO
+// 3. Listen for resizing and compute preview position
+// 4. Dragging the thum should update the video play
+
+// DONE
+// 1. Listen for clicking on a seek positions and play main video at that position.
+// 2. Hovering on the thumb trigers mouse leave event
