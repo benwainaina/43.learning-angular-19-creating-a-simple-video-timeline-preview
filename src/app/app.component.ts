@@ -67,6 +67,7 @@ export class AppComponent implements OnInit {
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
         this.listenForPreviewIntent();
+        this.listenForThumbDragEvent();
         if (!this.addedSampler) {
           this.preSampleVideoFrames(videoOutlet.nativeElement);
           this.addedSampler = true;
@@ -236,6 +237,8 @@ export class AppComponent implements OnInit {
       );
     }
   }
+
+  private listenForThumbDragEvent() {}
 
   private convertWidthToTimelinePositionInSeconds(
     totalWidth: number,
