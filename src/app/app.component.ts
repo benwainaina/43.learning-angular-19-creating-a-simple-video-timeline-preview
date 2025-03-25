@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-root',
@@ -34,11 +35,15 @@ export class AppComponent implements OnInit {
   private wrapperElement: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('wrapperElement');
   private renderer2: Renderer2 = inject(Renderer2);
+  private document: Document = inject(DOCUMENT);
+
   private videoDurationInMilliSeconds: number = 0;
   private videoSampler!: HTMLVideoElement;
   private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
   private addedSampler: boolean = false;
   private thumbClicked: boolean = false;
+  private isScrubbing: boolean = false;
+  private scrubbingAtPosition: number = 0;
 
   public allowPreview: boolean = false;
   public isPlaying: boolean = true;
@@ -58,6 +63,19 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.configureVideoPlayer();
     this.controlVideoProgressDisplay();
+    this.listenForMouseUpOnDocument();
+  }
+
+  private listenForMouseUpOnDocument() {
+    this.document.addEventListener('mouseup', (ev) => {
+      if (this.isScrubbing) {
+        this.toggleVideoPlay(true);
+        this.isScrubbing = false;
+        if (this.scrubbingAtPosition > 0) {
+          this.jumpVideoToSeekTime(this.scrubbingAtPosition);
+        }
+      }
+    });
   }
 
   private configureVideoPlayer() {
@@ -67,9 +85,8 @@ export class AppComponent implements OnInit {
       videoOutlet.nativeElement.autoplay = true;
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
-        this.listenForPreviewIntent();
-        this.listenForThumbDragEvent();
         if (!this.addedSampler) {
+          this.listenForPreviewIntent();
           this.preSampleVideoFrames(videoOutlet.nativeElement);
           this.addedSampler = true;
         }
@@ -139,21 +156,26 @@ export class AppComponent implements OnInit {
     filledProgress?: HTMLDivElement,
     indicatorThumb?: HTMLDivElement
   ) {
-    if (video && filledProgress && indicatorThumb) {
-      const percentCovered = `${
-        ((video.currentTime * 1000) / this.videoDurationInMilliSeconds) * 100
-      }%`;
-      this.commonSetStyle(filledProgress, 'width', percentCovered);
-      this.commonSetStyle(indicatorThumb, 'left', percentCovered);
+    if (video && !this.isScrubbing) {
+      this.updateVideoProgressIndicators(
+        `${
+          ((video.currentTime * 1000) / this.videoDurationInMilliSeconds) * 100
+        }%`,
+        filledProgress,
+        indicatorThumb
+      );
     }
   }
 
-  public toggleVideoPlay() {
-    this.isPlaying = !this.isPlaying;
-    console.log('this.isPlaying', this.isPlaying);
-    this.isPlaying
-      ? this.videoOutlet()?.nativeElement.play()
-      : this.videoOutlet()?.nativeElement.pause();
+  private updateVideoProgressIndicators(
+    percentCovered: string,
+    filledProgress?: HTMLDivElement,
+    indicatorThumb?: HTMLDivElement
+  ) {
+    if (filledProgress && indicatorThumb) {
+      this.commonSetStyle(filledProgress, 'width', percentCovered);
+      this.commonSetStyle(indicatorThumb, 'left', percentCovered);
+    }
   }
 
   public toggleMuted() {
@@ -210,8 +232,16 @@ export class AppComponent implements OnInit {
           );
           this.videoSampler.currentTime = seekTime;
 
-          if (this.thumbClicked && videoOutlet) {
+          if (this.isScrubbing && videoOutlet) {
             videoOutlet.nativeElement.currentTime = seekTime;
+            this.scrubbingAtPosition = seekTime;
+            this.updateVideoProgressIndicators(
+              `${
+                ((seekTime * 1000) / this.videoDurationInMilliSeconds) * 100
+              }%`,
+              this.filledProgress()?.nativeElement,
+              this.indicatorThumbElementRef()?.nativeElement
+            );
           }
         }
       );
@@ -222,7 +252,7 @@ export class AppComponent implements OnInit {
         (ev) => {
           if (this.thumbClicked) {
             this.thumbClicked = false;
-            this.toggleVideoPlay();
+            this.toggleVideoPlay(false);
           }
           this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
         }
@@ -232,15 +262,19 @@ export class AppComponent implements OnInit {
       videoProgressWrapperElementRef.nativeElement.addEventListener(
         'mousedown',
         (ev) => {
+          this.isScrubbing = true;
           const videoOutlet = this.videoOutlet();
           if (videoOutlet) {
-            videoOutlet.nativeElement.currentTime =
-              this.convertWidthToTimelinePositionInSeconds(
-                videoProgressWrapperElementRefWidth,
-                ev.clientX
-              );
-            this.updateVideoProgress(
-              this.videoOutlet()?.nativeElement,
+            const seektime = this.convertWidthToTimelinePositionInSeconds(
+              videoProgressWrapperElementRefWidth,
+              ev.clientX
+            );
+            videoOutlet.nativeElement.currentTime = seektime;
+            this.scrubbingAtPosition = seektime;
+            this.updateVideoProgressIndicators(
+              `${
+                ((seektime * 1000) / this.videoDurationInMilliSeconds) * 100
+              }%`,
               this.filledProgress()?.nativeElement,
               this.indicatorThumbElementRef()?.nativeElement
             );
@@ -251,19 +285,18 @@ export class AppComponent implements OnInit {
     }
   }
 
-  private listenForThumbDragEvent() {
-    const indicatorThumb = this.indicatorThumbElementRef();
-    if (indicatorThumb) {
-      indicatorThumb.nativeElement.addEventListener('mousedown', (ev) => {
-        this.thumbClicked = true;
-        this.toggleVideoPlay();
-        ev.stopImmediatePropagation();
-      });
-      indicatorThumb.nativeElement.addEventListener('mouseup', (ev) => {
-        this.toggleVideoPlay();
-        this.thumbClicked = false;
-      });
+  private jumpVideoToSeekTime(scrubbingAtPosition: number) {
+    const videoOutlet = this.videoOutlet();
+    if (videoOutlet) {
+      videoOutlet.nativeElement.currentTime = scrubbingAtPosition;
     }
+  }
+
+  public toggleVideoPlay(playVideo: boolean) {
+    this.isPlaying = playVideo;
+    this.isPlaying
+      ? this.videoOutlet()?.nativeElement.play()
+      : this.videoOutlet()?.nativeElement.pause();
   }
 
   private convertWidthToTimelinePositionInSeconds(
@@ -277,9 +310,9 @@ export class AppComponent implements OnInit {
 }
 
 // TODO
-// 3. Listen for resizing and compute preview position
-// 4. Dragging the thum should update the video play
 
 // DONE
 // 1. Listen for clicking on a seek positions and play main video at that position.
 // 2. Hovering on the thumb trigers mouse leave event
+// 3. Listen for resizing and compute preview position
+// 4. Dragging the thumb should update the video play
