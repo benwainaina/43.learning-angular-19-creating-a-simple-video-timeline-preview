@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   inject,
   OnInit,
   Renderer2,
@@ -195,13 +196,44 @@ export class AppComponent implements OnInit {
       this.videoProgressWrapperElementRef();
     const videoOutlet = this.videoOutlet();
     if (videoProgressWrapperElementRef) {
+      // remove any registered event listeners
+
+      videoProgressWrapperElementRef.nativeElement.removeEventListener(
+        'mousemove',
+        (ev) => onMouseMove(ev)
+      );
+      videoProgressWrapperElementRef.nativeElement.removeEventListener(
+        'mouseleave',
+        (ev) => onMouseLeave(ev)
+      );
+      videoProgressWrapperElementRef.nativeElement.removeEventListener(
+        'mousedown',
+        (ev) => onMouseDown(ev)
+      );
+
       const { width: videoProgressWrapperElementRefWidth } =
         videoProgressWrapperElementRef?.nativeElement.getBoundingClientRect();
 
       // on mouse move, adjust position and the preview content
       videoProgressWrapperElementRef.nativeElement.addEventListener(
         'mousemove',
-        (ev) => {
+        (ev) => onMouseMove(ev)
+      );
+
+      // on mouse leave, hide the preview
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mouseleave',
+        (ev) => onMouseLeave(ev)
+      );
+
+      // listen for mouse click on video timeline
+      videoProgressWrapperElementRef.nativeElement.addEventListener(
+        'mousedown',
+        (ev) => onMouseDown(ev)
+      );
+
+      const onMouseMove = (ev: MouseEvent) => {
+        {
           this.commonSetStyle(this.videoSampler, 'visibility', 'visible');
           const { clientX } = ev;
 
@@ -244,44 +276,34 @@ export class AppComponent implements OnInit {
             );
           }
         }
-      );
+      };
 
-      // on mouse leave, hide the preview
-      videoProgressWrapperElementRef.nativeElement.addEventListener(
-        'mouseleave',
-        (ev) => {
-          if (this.thumbClicked) {
-            this.thumbClicked = false;
-            this.toggleVideoPlay(false);
-          }
+      const onMouseLeave = (ev: MouseEvent) => {
+        if (this.thumbClicked) {
+          this.thumbClicked = false;
+          this.toggleVideoPlay(false);
+        }
+        this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
+      };
+
+      const onMouseDown = (ev: MouseEvent) => {
+        this.isScrubbing = true;
+        const videoOutlet = this.videoOutlet();
+        if (videoOutlet) {
+          const seektime = this.convertWidthToTimelinePositionInSeconds(
+            videoProgressWrapperElementRefWidth,
+            ev.clientX
+          );
+          videoOutlet.nativeElement.currentTime = seektime;
+          this.scrubbingAtPosition = seektime;
+          this.updateVideoProgressIndicators(
+            `${((seektime * 1000) / this.videoDurationInMilliSeconds) * 100}%`,
+            this.filledProgress()?.nativeElement,
+            this.indicatorThumbElementRef()?.nativeElement
+          );
           this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
         }
-      );
-
-      // listen for mouse click on video timeline
-      videoProgressWrapperElementRef.nativeElement.addEventListener(
-        'mousedown',
-        (ev) => {
-          this.isScrubbing = true;
-          const videoOutlet = this.videoOutlet();
-          if (videoOutlet) {
-            const seektime = this.convertWidthToTimelinePositionInSeconds(
-              videoProgressWrapperElementRefWidth,
-              ev.clientX
-            );
-            videoOutlet.nativeElement.currentTime = seektime;
-            this.scrubbingAtPosition = seektime;
-            this.updateVideoProgressIndicators(
-              `${
-                ((seektime * 1000) / this.videoDurationInMilliSeconds) * 100
-              }%`,
-              this.filledProgress()?.nativeElement,
-              this.indicatorThumbElementRef()?.nativeElement
-            );
-            this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
-          }
-        }
-      );
+      };
     }
   }
 
@@ -306,6 +328,12 @@ export class AppComponent implements OnInit {
     return (
       (this.videoDurationInMilliSeconds * (targetPosition / totalWidth)) / 1000
     );
+  }
+
+  @HostListener('window:resize', ['$event'])
+  private onWindowResize() {
+    this.styleVideoPreview();
+    this.listenForPreviewIntent();
   }
 }
 
