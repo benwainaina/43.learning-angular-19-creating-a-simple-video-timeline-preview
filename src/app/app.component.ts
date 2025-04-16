@@ -36,11 +36,11 @@ export class AppComponent implements OnInit {
 
   private renderer2: Renderer2 = inject(Renderer2);
   private document: Document = inject(DOCUMENT);
+
   private videoDurationInMilliSeconds: number = 0;
   private videoSampler!: HTMLVideoElement;
   private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
   private addedSampler: boolean = false;
-  // private thumbClicked: boolean = false;
   private isScrubbing: boolean = false;
   private scrubbingAtPosition: number = 0;
 
@@ -80,7 +80,7 @@ export class AppComponent implements OnInit {
   private configureVideoPlayer() {
     const videoOutlet = this.videoOutlet();
     if (videoOutlet) {
-      videoOutlet.nativeElement.muted = true; // read this from the local storage
+      videoOutlet.nativeElement.muted = true;
       videoOutlet.nativeElement.autoplay = true;
       videoOutlet.nativeElement.oncanplay = (ev: any) => {
         this.videoDurationInMilliSeconds = ev.target.duration * 1000;
