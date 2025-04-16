@@ -1,75 +1,95 @@
-.wrapper {
-  position: relative;
-  // width: 320px;
+:host {
   display: flex;
-  flex-direction: column;
-  row-gap: 24px;
+  height: 100%;
+}
 
-  &__video {
-    width: 100%;
-    aspect-ratio: 1;
-  }
+.wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
 
-  &__video-control-panel {
+  &__inner {
+    $border-color: #afafaf;
     display: flex;
+    width: 640px;
     flex-direction: column;
-    row-gap: 12px;
+    row-gap: 24px;
+    position: relative;
+    border: 2px solid $border-color;
+    border-top: 0;
+    border-bottom: 0;
+    padding: 0 12px;
+    height: 100%;
 
-    &__progress {
-      height: 10px;
+    &__video {
       width: 100%;
+      aspect-ratio: 1;
+    }
+
+    &__video-control-panel {
       display: flex;
-      position: relative;
-      align-items: center;
-      cursor: pointer;
+      flex-direction: column;
+      row-gap: 12px;
 
-      &__filled,
-      &__empty {
-        height: 100%;
-      }
-
-      &__filled {
-        background-color: red;
-        left: 0;
-        position: absolute;
-      }
-
-      &__empty {
-        background-color: #f1f1f1;
+      &__progress {
+        height: 10px;
         width: 100%;
+        display: flex;
+        position: relative;
+        align-items: center;
+        cursor: pointer;
+
+        &__filled,
+        &__empty {
+          height: 100%;
+        }
+
+        &__filled {
+          background-color: red;
+          left: 0;
+          position: absolute;
+        }
+
+        &__empty {
+          background-color: #f1f1f1;
+          width: 100%;
+        }
+      }
+
+      &__controls {
+        display: flex;
+        column-gap: 24px;
+        mat-icon {
+          font-size: 44px;
+          height: 44px;
+          width: 44px;
+          cursor: pointer;
+        }
       }
     }
 
-    &__controls {
+    &__video-progress {
+      position: relative;
       display: flex;
-      column-gap: 24px;
-      mat-icon {
-        font-size: 44px;
-        height: 44px;
-        width: 44px;
+      align-items: center;
+
+      &__thumb {
+        width: 20px;
+        height: 20px;
+        background-color: red;
+        position: absolute;
+        border-radius: 50%;
         cursor: pointer;
       }
     }
-  }
 
-  &__video-progress {
-    position: relative;
-    display: flex;
-    align-items: center;
-
-    &__thumb {
-      width: 20px;
-      height: 20px;
-      background-color: red;
-      position: absolute;
-      border-radius: 50%;
-      cursor: pointer;
+    &__preview {
+      outline: 1px solid black;
+      width: 100px;
+      aspect-ratio: 1;
     }
-  }
-
-  &__preview {
-    outline: 1px solid black;
-    width: 100px;
-    aspect-ratio: 1;
   }
 }

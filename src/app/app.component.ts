@@ -26,8 +26,6 @@ export class AppComponent implements OnInit {
   > = viewChild('videoProgressWrapperElementRef');
   private videoOutlet: Signal<ElementRef<HTMLVideoElement> | undefined> =
     viewChild('video');
-  // private canvasOutlet: Signal<ElementRef<HTMLCanvasElement> | undefined> =
-  //   viewChild('canvas');
   private filledProgress: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('filledProgress');
   private indicatorThumbElementRef: Signal<
@@ -35,14 +33,14 @@ export class AppComponent implements OnInit {
   > = viewChild('indicatorThumbElementRef');
   private wrapperElement: Signal<ElementRef<HTMLDivElement> | undefined> =
     viewChild('wrapperElement');
+
   private renderer2: Renderer2 = inject(Renderer2);
   private document: Document = inject(DOCUMENT);
-
   private videoDurationInMilliSeconds: number = 0;
   private videoSampler!: HTMLVideoElement;
   private videoSamplerRect: WritableSignal<DOMRect | null> = signal(null);
   private addedSampler: boolean = false;
-  private thumbClicked: boolean = false;
+  // private thumbClicked: boolean = false;
   private isScrubbing: boolean = false;
   private scrubbingAtPosition: number = 0;
 
@@ -159,9 +157,7 @@ export class AppComponent implements OnInit {
   ) {
     if (video && !this.isScrubbing) {
       this.updateVideoProgressIndicators(
-        `${
-          ((video.currentTime * 1000) / this.videoDurationInMilliSeconds) * 100
-        }%`,
+        ((video.currentTime * 1000) / this.videoDurationInMilliSeconds) * 100,
         filledProgress,
         indicatorThumb
       );
@@ -169,13 +165,16 @@ export class AppComponent implements OnInit {
   }
 
   private updateVideoProgressIndicators(
-    percentCovered: string,
+    percentCovered: number,
     filledProgress?: HTMLDivElement,
     indicatorThumb?: HTMLDivElement
   ) {
+    if (percentCovered > 100) {
+      return;
+    }
     if (filledProgress && indicatorThumb) {
-      this.commonSetStyle(filledProgress, 'width', percentCovered);
-      this.commonSetStyle(indicatorThumb, 'left', percentCovered);
+      this.commonSetStyle(filledProgress, 'width', `${percentCovered}%`);
+      this.commonSetStyle(indicatorThumb, 'left', `${percentCovered}%`);
     }
   }
 
@@ -237,10 +236,14 @@ export class AppComponent implements OnInit {
           this.commonSetStyle(this.videoSampler, 'visibility', 'visible');
           const { clientX } = ev;
 
-          // block moving preview past the available area
+          const { x: wrapperOffsetX } = this.getWrapperBoundingClient() || {
+            x: 0,
+          };
 
           let samplerPositionX =
-            clientX - (this.videoSamplerRect()?.width || 0) / 2;
+            clientX -
+            (this.videoSamplerRect()?.width || 0) / 2 -
+            wrapperOffsetX;
 
           if (
             samplerPositionX + (this.videoSamplerRect()?.width || 0) >
@@ -258,19 +261,17 @@ export class AppComponent implements OnInit {
             'left',
             `${samplerPositionX}px`
           );
-          const seekTime = this.convertWidthToTimelinePositionInSeconds(
-            videoProgressWrapperElementRefWidth,
-            clientX
-          );
-          this.videoSampler.currentTime = seekTime;
 
           if (this.isScrubbing && videoOutlet) {
+            const seekTime = this.convertWidthToTimelinePositionInSeconds(
+              videoProgressWrapperElementRefWidth,
+              clientX - wrapperOffsetX
+            );
+            this.videoSampler.currentTime = seekTime;
             videoOutlet.nativeElement.currentTime = seekTime;
             this.scrubbingAtPosition = seekTime;
             this.updateVideoProgressIndicators(
-              `${
-                ((seekTime * 1000) / this.videoDurationInMilliSeconds) * 100
-              }%`,
+              ((seekTime * 1000) / this.videoDurationInMilliSeconds) * 100,
               this.filledProgress()?.nativeElement,
               this.indicatorThumbElementRef()?.nativeElement
             );
@@ -279,8 +280,8 @@ export class AppComponent implements OnInit {
       };
 
       const onMouseLeave = (ev: MouseEvent) => {
-        if (this.thumbClicked) {
-          this.thumbClicked = false;
+        console.log('mouse leave');
+        if (this.isScrubbing) {
           this.toggleVideoPlay(false);
         }
         this.commonSetStyle(this.videoSampler, 'visibility', 'hidden');
@@ -290,14 +291,17 @@ export class AppComponent implements OnInit {
         this.isScrubbing = true;
         const videoOutlet = this.videoOutlet();
         if (videoOutlet) {
+          const { x: wrapperOffsetX } = this.getWrapperBoundingClient() || {
+            x: 0,
+          };
           const seektime = this.convertWidthToTimelinePositionInSeconds(
             videoProgressWrapperElementRefWidth,
-            ev.clientX
+            ev.clientX - wrapperOffsetX
           );
           videoOutlet.nativeElement.currentTime = seektime;
           this.scrubbingAtPosition = seektime;
           this.updateVideoProgressIndicators(
-            `${((seektime * 1000) / this.videoDurationInMilliSeconds) * 100}%`,
+            ((seektime * 1000) / this.videoDurationInMilliSeconds) * 100,
             this.filledProgress()?.nativeElement,
             this.indicatorThumbElementRef()?.nativeElement
           );
@@ -335,12 +339,8 @@ export class AppComponent implements OnInit {
     this.styleVideoPreview();
     this.listenForPreviewIntent();
   }
+
+  private getWrapperBoundingClient(): DOMRect | undefined {
+    return this.wrapperElement()?.nativeElement.getBoundingClientRect();
+  }
 }
-
-// TODO
-
-// DONE
-// 1. Listen for clicking on a seek positions and play main video at that position.
-// 2. Hovering on the thumb trigers mouse leave event
-// 3. Listen for resizing and compute preview position
-// 4. Dragging the thumb should update the video play
