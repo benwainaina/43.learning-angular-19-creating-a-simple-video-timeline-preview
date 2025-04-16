@@ -45,8 +45,8 @@ export class AppComponent implements OnInit {
   private scrubbingAtPosition: number = 0;
 
   public allowPreview: boolean = false;
-  public isPlaying: boolean = true;
-  public isMuted: boolean = false;
+  public isPlaying: WritableSignal<boolean> = signal(true);
+  public isMuted: WritableSignal<boolean> = signal(false);
   public playBackRate: number = 1;
   public videoSources: Array<{ source: string; type: string }> = [
     {
@@ -179,10 +179,10 @@ export class AppComponent implements OnInit {
   }
 
   public toggleMuted() {
-    this.isMuted = !this.isMuted;
+    this.isMuted.set(!this.isMuted());
     const videoOutlet = this.videoOutlet();
     if (videoOutlet) {
-      videoOutlet.nativeElement.muted = this.isMuted;
+      videoOutlet.nativeElement.muted = this.isMuted();
     }
   }
 
@@ -280,7 +280,6 @@ export class AppComponent implements OnInit {
       };
 
       const onMouseLeave = (ev: MouseEvent) => {
-        console.log('mouse leave');
         if (this.isScrubbing) {
           this.toggleVideoPlay(false);
         }
@@ -319,8 +318,8 @@ export class AppComponent implements OnInit {
   }
 
   public toggleVideoPlay(playVideo: boolean) {
-    this.isPlaying = playVideo;
-    this.isPlaying
+    this.isPlaying.set(playVideo);
+    this.isPlaying()
       ? this.videoOutlet()?.nativeElement.play()
       : this.videoOutlet()?.nativeElement.pause();
   }
