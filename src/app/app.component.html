@@ -2,27 +2,24 @@
 
 <div class="wrapper">
   <div class="wrapper__inner" #wrapperElement>
-    <video class="wrapper__inner__video" #video crossorigin="anonymous">
+    <video class="video" #video crossorigin="anonymous">
       @for(source of videoSources; track source.type) {
       <source src="{{ source.source }}" type="{{ source.type }}" />
       }
     </video>
-    <div class="wrapper__inner__video-control-panel">
+    <div class="video-control-panel">
       <div
-        class="wrapper__inner__video-control-panel__progress"
+        class="video-control-panel__progress"
         #videoProgressWrapperElementRef
       >
-        <div class="wrapper__inner__video-control-panel__progress__empty"></div>
+        <div class="video-control-panel__progress__empty"></div>
         <div
-          class="wrapper__inner__video-control-panel__progress__filled"
+          class="video-control-panel__progress__filled"
           #filledProgress
         ></div>
-        <div
-          class="wrapper__inner__video-progress__thumb"
-          #indicatorThumbElementRef
-        ></div>
+        <div class="video-progress__thumb" #indicatorThumbElementRef></div>
       </div>
-      <div class="wrapper__inner__video-control-panel__controls">
+      <div class="video-control-panel__controls">
         <mat-icon (click)="toggleVideoPlay(!_isPlaying)">{{
           _isPlaying ? "pause" : "play_arrow"
         }}</mat-icon>

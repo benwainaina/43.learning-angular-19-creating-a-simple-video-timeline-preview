@@ -23,73 +23,73 @@
     border-bottom: 0;
     padding: 0 12px;
     height: 100%;
+  }
+}
 
-    &__video {
+.video {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.video-control-panel {
+  display: flex;
+  flex-direction: column;
+  row-gap: 12px;
+
+  &__progress {
+    height: 10px;
+    width: 100%;
+    display: flex;
+    position: relative;
+    align-items: center;
+    cursor: pointer;
+
+    &__filled,
+    &__empty {
+      height: 100%;
+    }
+
+    &__filled {
+      background-color: red;
+      left: 0;
+      position: absolute;
+    }
+
+    &__empty {
+      background-color: #f1f1f1;
       width: 100%;
-      aspect-ratio: 1;
-    }
-
-    &__video-control-panel {
-      display: flex;
-      flex-direction: column;
-      row-gap: 12px;
-
-      &__progress {
-        height: 10px;
-        width: 100%;
-        display: flex;
-        position: relative;
-        align-items: center;
-        cursor: pointer;
-
-        &__filled,
-        &__empty {
-          height: 100%;
-        }
-
-        &__filled {
-          background-color: red;
-          left: 0;
-          position: absolute;
-        }
-
-        &__empty {
-          background-color: #f1f1f1;
-          width: 100%;
-        }
-      }
-
-      &__controls {
-        display: flex;
-        column-gap: 24px;
-        mat-icon {
-          font-size: 44px;
-          height: 44px;
-          width: 44px;
-          cursor: pointer;
-        }
-      }
-    }
-
-    &__video-progress {
-      position: relative;
-      display: flex;
-      align-items: center;
-
-      &__thumb {
-        width: 20px;
-        height: 20px;
-        background-color: red;
-        position: absolute;
-        border-radius: 50%;
-        cursor: pointer;
-      }
-    }
-
-    &__preview {
-      outline: 1px solid black;
-      width: 100px;
-      aspect-ratio: 1;
     }
   }
+
+  &__controls {
+    display: flex;
+    column-gap: 24px;
+    mat-icon {
+      font-size: 44px;
+      height: 44px;
+      width: 44px;
+      cursor: pointer;
+    }
+  }
+}
+
+.video-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &__thumb {
+    width: 20px;
+    height: 20px;
+    background-color: red;
+    position: absolute;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+}
+
+.preview {
+  outline: 1px solid black;
+  width: 100px;
+  aspect-ratio: 1;
 }
